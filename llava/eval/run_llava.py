@@ -57,17 +57,17 @@ def eval_model(args):
     )
 
     qs = args.query
-    image_token_se = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN
-    if IMAGE_PLACEHOLDER in qs:
-        if model.config.mm_use_im_start_end:
-            qs = re.sub(IMAGE_PLACEHOLDER, image_token_se, qs)
-        else:
-            qs = re.sub(IMAGE_PLACEHOLDER, DEFAULT_IMAGE_TOKEN, qs)
-    else:
-        if model.config.mm_use_im_start_end:
-            qs = image_token_se + "\n" + qs
-        else:
-            qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
+    # image_token_se = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN
+    # if IMAGE_PLACEHOLDER in qs:
+    #     if model.config.mm_use_im_start_end:
+    #         qs = re.sub(IMAGE_PLACEHOLDER, image_token_se, qs)
+    #     else:
+    #         qs = re.sub(IMAGE_PLACEHOLDER, DEFAULT_IMAGE_TOKEN, qs)
+    # else:
+    #     if model.config.mm_use_im_start_end:
+    #         qs = image_token_se + "\n" + qs
+    #     else:
+    #         qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
 
     if "llama-2" in model_name.lower():
         conv_mode = "llava_llama_2"
@@ -96,14 +96,39 @@ def eval_model(args):
     conv.append_message(conv.roles[1], None)
     prompt = conv.get_prompt()
 
-    image_files = image_parser(args)
-    images = load_images(image_files)
-    image_sizes = [x.size for x in images]
-    images_tensor = process_images(
-        images,
-        image_processor,
-        model.config
-    ).to(model.device, dtype=torch.float16)
+    if args.image_file is not None:
+        image_files = image_parser(args)
+        images = load_images(image_files)
+        image_sizes = [x.size for x in images]
+        images_tensor = process_images(
+                images,
+                image_processor,
+                model.config
+            ).to(model.device, dtype=torch.float16)
+        image_token_se = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN
+        if IMAGE_PLACEHOLDER in qs:
+            if model.config.mm_use_im_start_end:
+                qs = re.sub(IMAGE_PLACEHOLDER, image_token_se, qs)
+            else:
+                qs = re.sub(IMAGE_PLACEHOLDER, DEFAULT_IMAGE_TOKEN, qs)
+        else:
+            if model.config.mm_use_im_start_end:
+                qs = image_token_se + "\n" + qs
+            else:
+                qs = DEFAULT_IMAGE_TOKEN + "\n" + qs
+    else:
+        images_tensor = None
+        image_sizes = None
+
+
+    # image_files = image_parser(args)
+    # images = load_images(image_files)
+    # image_sizes = [x.size for x in images]
+    # images_tensor = process_images(
+    #     images,
+    #     image_processor,
+    #     model.config
+    # ).to(model.device, dtype=torch.float16)
 
     input_ids = (
         tokenizer_image_token(prompt, tokenizer, IMAGE_TOKEN_INDEX, return_tensors="pt")
